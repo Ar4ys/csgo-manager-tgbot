@@ -1,0 +1,11 @@
+{
+  "name": "csgo-manager-tgbot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "r4ys\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[DAr4ys",
+  "license": "ISC"
+}
