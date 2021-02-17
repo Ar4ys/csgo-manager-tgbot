@@ -2,10 +2,18 @@
   "name": "csgo-manager-tgbot",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "r4ys\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[DAr4ys",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "colors": "^1.4.0",
+    "express": "^4.17.1",
+    "nedb": "^1.8.0",
+    "node-telegram-bot-api": "^0.51.0",
+    "uuid": "^3.4.0"
+  }
 }
