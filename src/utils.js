@@ -3,6 +3,10 @@ import "colors"
 
 export const uuidRegex = /^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i
 
+export const generateAuthCode() {
+	return Math.floor(Math.random() * (999999 - 100000) + 100000) // generate random 6 digits
+}
+
 export async function logBotStarted() {
 	// console.log("Bot Started".blue)
 	log("Bot Started")

@@ -1,7 +1,8 @@
 import TelegramBot from "node-telegram-bot-api"
-import { uuidRegex, error } from "./utils.js"
+import { uuidRegex, error, generateAuthCode } from "./utils.js"
 import { db } from "./db.js"
 import locals from "./i18n.js"
+import { v4 as uuid } from 'uuid'
 
 const token = process.env.TOKEN
 const bot = new TelegramBot(token)
@@ -16,81 +17,112 @@ bot.startPolling()
 bot.on("text", async msg => {
 	const { text, chat, from } = msg
 	
-	if (/^\/start$/.test(text)) {
-		return bot.sendMessage(chat.id, "To start - send me token from pinger app")
-	} else if (uuidRegex.test(text)) {
-		db.find({ id: from.id }, async (err, user) => {
-			if (err)
-				throw err
-
-			if (!user)
-				await login(text, from.id)
-					.then(() => {
-						bot.sendMessage(
-							chat.id,
-							"You are successfuly logined. If you want to change language "
-							+ "use command `/lang [lang]`\n"
-							+ "Avaliable languages: en, ru"
-						)
-					}).catch(({ code, reason }) => {
-						error(reason)
-						if (code === 0)
-							bot.sendMessage(chat.id, "Oops, smth got wrong, try a bit later")
-						if (code === 3)
-							bot.sendMessage(chat.id, reason)
-					})
-		})
+	if (/^\/start$/.test(text))
+		return await startCommand(msg)
+	else if (/^\/login$/.test(text)) {
+		return await login(from.id)
+			.then(code => bot.sendMessage(
+				chat.id,
+				`\`${code}\`\n`
+				+ "Enter this code in CSGO Pinger app."
+				+ " It will work for 5 minutes"
+			)).catch(err => {
+				error(err)
+				bot.sendMessage(chat.id, "Oops, smth got wrong, try a bit later")
+			})
 	} else if (langCommandRegex.test(text)) {
-		const [ , lang ] = text.match(langCommandRegex)
+		let [ , lang ] = text.match(langCommandRegex)
 		const languages = ["en", "ru"]
-		if (!lang || !languages.include(lang))
-			bot.sendMessage(
+		if (!lang || !languages.include(lang.toLowerCase()))
+			return bot.sendMessage(
 				chat.id,
 				"/lang [lang]- change language\n"
-				+ "Avaliable languages: en, ru"
+				+ "Avaliable languages: en, ru\n"
+				+ "WARNING: This bot is not fully translated (main language - en)"
 			)
-
-		bot.update({ id: from.id }, { $set: { local: lang }})
+		lang = lang.toLowerCase()
+		db.update({ tgId: from.id }, { $set: { local: lang }})
+			.then(() => bot.sendMessage(`Language has been changed to ${lang}`))
+			.catch(err => {
+				error(err)
+				bot.sendMessage(chat.id, "Can't change language, smth has broken 0_o")
+			})
 	}
 })
 
-function login(token, id) {
-	return new Promise((res, rej) => {
-		db.update({
-			token,
-			id: { $exists: false }
-		}, { $set: { id } }, (err, updateCount) => {
-			if (err)
-				rej({ code: 0, reason: err })
-			if (updateCount === 0)
-				rej({ code: 3, reason: "Token is invalid or already used" })
+async function startCommand({ chat, from }) {
+	return await createUser(from.id)
+		.then(() => login(from.id))
+		.then(code => helloMsg(chat.id, code))
+		.catch(error)
+}
 
-			res()
-		})
+async function helloMsg(chatId, authCode) {
+	return bot.sendMessage(
+		chatId,
+		"I'm your CSGO manager bot.\n"
+		+ "Commands:\n"
+		+ "/help - list of all commands\n"
+		+ "/login - get auth code\n"
+		+ "/lang [en|ru]- change language\n\n"
+		+ `Your auth code: \`${authCode}\`\n`
+		+ "Enter this code in CSGO Pinger app. It will work for 5 minutes"
+	)
+}
+
+async function createUser(tgId) {
+	return db.insert({
+		tgId,
+		token: uuid(),
+		local: "en",
+		authCode: {
+			value: null,
+			timestamp: null
+		}
 	})
+}
+
+async function login(tgId) {
+	return db.find({ tgId })
+		.then(async user => {
+			if (!user)
+				throw new Error({ code: 0, reason: "User is not found in db" })
+
+			const { authCode } = user
+			const code = generateAuthCode()
+			await db.update(
+				{ tgId },
+				{
+					$set: {
+						authCode: {
+							value: code,
+							timestamp: Date.now()
+						}
+					}
+				},
+				{}
+			)
+
+			return code
+		})
 }
 
 export bot
 
 export async function sendMessage(token, type) {
-	return new Promise((res, rej) => {
-		db.find({
+	return db.find({
 			token,
-			id: { $exists: true }
-		}, (err, user) => {
-			if (err)
-				rej( code: 0, reason: err)
-			if (user === null || user === undefined)
-				rej({ code: 1, reason: "User is not logined" })
+			tgId: { $exists: true }
+		}).then(user => {
+			if (!user)
+				throw new Error({ code: 1, reason: "User is not logined" })
 
-			const { local, id } = user
+			const { local, tgId } = user
 			const msg = locals[local][type]
 
 			if (!msg)
-				rej({ code: 2, reason: "Incorrect message type" })
+				throw new Error({ code: 2, reason: "Incorrect message type" })
 
-			bot.sendMessage(id, msg)
-			res()
-		}
-	})
+			return bot.sendMessage(tgId, msg)
+		})
 }
