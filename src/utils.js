@@ -3,7 +3,7 @@ import "colors"
 
 export const uuidRegex = /^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i
 
-export const generateAuthCode() {
+export function generateAuthCode() {
 	return Math.floor(Math.random() * (999999 - 100000) + 100000) // generate random 6 digits
 }
 
@@ -27,8 +27,10 @@ export async function log(type, ...args) {
 
 	if (typeof type === "function")
 		logFunc = type
-	else
+	else {
+		logFunc = console.log
 		args = [type, ...args]
+	}
 
 	const msg = args.join(" ")
 	const currentTime = new Date().toTimeString().split(" ")[0]
@@ -36,6 +38,6 @@ export async function log(type, ...args) {
 	logFunc(...args)
 	await fs.appendFile(
 		`./logs/log-${logDate}.txt`,
-		`[${currentTime}] ${msg}\n\n`
+		`[${currentTime}] ${msg}\n`
 	)
 }

@@ -1,12 +1,10 @@
 import { logError, logClosing } from "./utils.js"
-import { bot } from "./bot.js"
+import "./bot.js"
+import "./http.js"
 
-process.on("uncaughtException", async e => {
-	await logError(e)
-	const isClosed = await bot.close()
-	if (isClosed)
-		return await logClosing()
-
-	await logError(new Error("Cannot stop bot"))
-	await logClosing()
+process.on("SIGTERM", async () => await logClosing())
+process.on("SIGINT", async () => await logClosing())
+process.on("uncaughtException", async err => {
+	await logError(err)
+	await logClosing(err)
 })

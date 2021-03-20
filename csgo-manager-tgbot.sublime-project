@@ -4,5 +4,22 @@
 		{
 			"path": "."
 		}
-	]
+	],
+	"settings":
+	{
+		"debug.configurations":
+		[
+			{
+				"cwd": "${workspaceFolder}",
+				"env":
+				{
+					"TOKEN": "1536599712:AAE3_GiD4GoYzWsTDl-iFmPV8vWSi3BDs0I"
+				},
+				"name": "Launch via npm",
+				"program": "${workspaceFolder}/src/index.js",
+				"request": "launch",
+				"type": "node"
+			}
+		]
+	}
 }

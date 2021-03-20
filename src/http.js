@@ -1,5 +1,4 @@
-import { v4 as uuid } from 'uuid'
-import { log, error } from "./utils.js"
+import { log, logError } from "./utils.js"
 import { db } from "./db.js"
 import { sendMessage } from "./bot.js"
 import express from "express"
@@ -29,7 +28,7 @@ app.get("/token/:code", (req, res) => {
 			return res.send({ token })
 		})
 		.catch(err => {
-			error(err)
+			logError(err)
 			res.status(500).send({ reason: err })
 		})
 })
@@ -40,7 +39,7 @@ app.post("/message", (req, res) => {
 	sendMessage(token, type)
 		.then(() => res.send())
 		.catch(err => {
-			error(err)
+			logError(err)
 			if (err.code)
 				res.status(400).send(err)
 			else
@@ -48,7 +47,10 @@ app.post("/message", (req, res) => {
 			})
 })
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
 	log(`HTTP server is started at port ${port}`)
 })
 
+process.on("uncaughtException", async err => await server.close())
+process.on("SIGTERM", async () => await server.close())
+process.on("SIGINT", async () => await server.close())
